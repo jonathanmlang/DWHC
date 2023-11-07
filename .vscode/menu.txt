@@ -1,0 +1,831 @@
+#include <main.h>
+
+bool submenu=0;
+byte menupos=0;
+byte numopt=7;
+
+void menufn(){
+
+    btnUP.read();
+    btnDN.read();
+    btnSEL.read();
+
+    bool up_     =btnUP.wasPressed();
+    bool up_rpt  =btnUP.pressedFor(500);
+    bool sel_    =btnSEL.wasPressed();
+    bool sel_rpt =btnSEL.pressedFor(1000);
+    bool sel_long=btnSEL.pressedFor(5000);
+    bool dn_     =btnDN.wasPressed();
+    bool dn_rpt  =btnDN.pressedFor(500);
+
+    if (submenu){
+      if (menuselect==0){  
+        
+        if (up_ || up_rpt){
+
+            if (menupos==0){
+                //if (up_rpt){}
+                //else       {flashspd=min(flashspd+1,120);}
+            }
+
+            if (menupos==1){ //fuel level
+                if (up_rpt){tankval[0]=min(tankval[0]+10,tankmax[0]);}
+                else       {tankval[0]=min(tankval[0]+1,tankmax[0]);}
+                if (sel_){ tankval[0]=tankmax[0];}
+
+            }
+/*
+            if (menupos==2){ //fuel max level
+                if (up_rpt){tankmax[0]=min(tankmax[0]+10,9999);}
+                else       {tankmax[0]=min(tankmax[0]+1,9999);}
+
+            }
+*/
+            if (menupos==2){ //fuel level 2
+                if (up_rpt){tankval[1]=min(tankval[1]+10,tankmax[1]);}
+                else       {tankval[1]=min(tankval[1]+1,tankmax[1]);}
+                if (sel_){ tankval[1]=tankmax[1];}
+            }
+/*
+            if (menupos==4){ //fuel max level 2
+                if (up_rpt){tankmax[1]=min(tankmax[1]+10,9999);}
+                else       {tankmax[1]=min(tankmax[1]+1,9999);}
+
+            }
+*/
+            if (menupos==3){ //oil ratio
+                    t1rat=min(t1rat+1,99);
+
+            }
+
+            if (menupos==4){ //fuel ratio
+                    t2rat=min(t2rat+1,99);
+
+            }
+
+            if (menupos==5){ //preheat time seconds
+                if (up_rpt){preheat_t=min(preheat_t+10,999);}
+                else       {preheat_t=min(preheat_t+1,999);}
+
+            }
+        
+        }
+
+        if (dn_ || dn_rpt){
+
+            if (menupos==0){
+                //if (dn_rpt){}
+                //else       {flashspd=max(flashspd-1,1);}
+            }
+
+            if (menupos==1){ //fuel level
+                if (dn_rpt){tankval[0]=max(tankval[0]-10,0);}
+                else       {tankval[0]=max(tankval[0]-1,0);}
+            }
+/*
+            if (menupos==2){ //fuel max level
+                if (dn_rpt){tankmax[0]=max(tankmax[0]-10,0);}
+                else       {tankmax[0]=max(tankmax[0]-1,0);}
+            }
+*/
+            if (menupos==2){ //fuel level 2
+                if (dn_rpt){tankval[1]=max(tankval[1]-10,0);}
+                else       {tankval[1]=max(tankval[1]-1,0);}
+            }
+/*
+            if (menupos==4){ //fuel max level 2
+                if (dn_rpt){tankmax[1]=max(tankmax[1]-10,0);}
+                else       {tankmax[1]=max(tankmax[1]-1,0);}
+            }
+*/
+            if (menupos==3){ //oil ratio
+                t1rat=max(t1rat-1,0);
+                
+            }
+
+            if (menupos==4){ //fuel ratio 2
+                t2rat=max(t2rat-1,0);
+                if (t1rat==0 && t2rat==0) t1rat=1;
+            }
+
+            if (menupos==5){ //preheat time seconds
+                if (dn_rpt && preheat_t>100){preheat_t=max(preheat_t-10,0);}
+                else       {preheat_t=preheat_t-1>999 || preheat_t-1==0 ? 0 : max(preheat_t-1,0);}
+            }
+        }
+    
+
+        if (sel_rpt && !up_ && !up_rpt){
+            if (menupos==1){
+                submenu=0;
+                //tankval[0]=tankmax[0]; //reset tank to full
+            }
+
+            if (menupos==2){
+                submenu=0;
+                //tankval[1]=tankmax[1];
+            }
+            sel_=0;
+        }
+      }
+
+    if (menuselect==1){  
+        if (up_ || up_rpt){
+
+            if (menupos==0){ //tank1 max level
+                if (up_rpt){tankmax[0]=min(tankmax[0]+10,9999);}
+                else       {tankmax[0]=min(tankmax[0]+1,9999);}
+            }
+
+            if (menupos==1){ //tank2 max level
+                if (up_rpt){tankmax[1]=min(tankmax[1]+10,9999);}
+                else       {tankmax[1]=min(tankmax[1]+1,9999);}
+
+            }
+
+            
+
+            if (menupos==3){ //low alarm %
+                bar_low_perc=min(bar_low_perc+1,99);
+                
+
+
+            }
+
+            if (menupos==4){ //fuel 
+                if (up_rpt){tankclean_amt=min(tankclean_amt+10,9999);}
+                else       {tankclean_amt=min(tankclean_amt+1,9999);}
+
+            }
+
+            if (menupos==5){ //fuel max level 2
+                if (up_rpt){tankclean_val=min(tankclean_val+10,9999);}
+                else       {tankclean_val=min(tankclean_val+1,9999);}
+
+            }
+
+            delay(20); //make sure values dont increase or decrease so fast
+
+        
+        }
+
+        if (dn_ || dn_rpt){
+
+            if (menupos==0){
+                if (dn_rpt){tankmax[0]=max(tankmax[0]-10,0);}
+                else       {tankmax[0]=max(tankmax[0]-1,0);}
+            }
+
+            if (menupos==1){ //fuel level
+                if (dn_rpt){tankmax[1]=max(tankmax[1]-10,0);}
+                else       {tankmax[1]=max(tankmax[1]-1,0);}
+            }
+
+
+            if (menupos==3){ //ratio 1
+                bar_low_perc=max(bar_low_perc-1,0);
+                
+            }
+
+            if (menupos==4){ //fuel purge
+                if (dn_rpt){tankclean_amt=max(tankclean_amt-10,0);}
+                else       {tankclean_amt=max(tankclean_amt-1,0);}
+
+            }
+
+            if (menupos==5){ //preheat delay
+                if (dn_rpt){tankclean_val=max(tankclean_val-10,0);}
+                else       {tankclean_val=max(tankclean_val-1,0);}
+            }
+
+            delay(20); //make sure values dont increase or decrease so fast
+        }
+
+        
+        
+      }
+
+      if (menuselect==2){  
+        if (up_ || up_rpt){
+
+            
+
+            if (menupos==1){ //pump pulse ml
+                if (up_rpt){pumprate=min(pumprate+0.00001,0.009999);}
+                else       {pumprate=min(pumprate+0.000001,0.009999);}
+
+            }
+
+            if (menupos==2){ //pump pulse ml
+                if (up_rpt){pumprate_2=min(pumprate_2+0.00001,0.009999);}
+                else       {pumprate_2=min(pumprate_2+0.000001,0.009999);}
+
+            }
+
+            if (menupos==3){ //fuel level 2
+                contrastval=min(contrastval+1,255);
+                oled.setContrast(contrastval);
+            }
+
+            if (menupos==4){ //fuel level 2
+                backlight=min(backlight+10,250);
+                analogWrite(9,backlight);
+                backlight!=0 ? oled.ssd1306WriteCmd(B10100110) : oled.ssd1306WriteCmd(B10100111); //invert lcd so its more visible with bl off
+            }
+
+            delay(20); //make sure values dont increase or decrease so fast
+
+        
+        }
+
+        if (dn_ || dn_rpt){
+
+
+            if (menupos==1){ //fuel level
+                if (dn_rpt){pumprate=max(pumprate-0.00001,0.0);}
+                else       {pumprate=max(pumprate-0.000001,0.0);}
+            }
+
+            if (menupos==2){ //fuel level 2
+                if (dn_rpt){pumprate_2=max(pumprate_2-0.00001,0.0);}
+                else       {pumprate_2=max(pumprate_2-0.000001,0.0);}
+            }
+
+            if (menupos==3){ //fuel level 2
+                contrastval=max(contrastval-1,215);
+                oled.setContrast(contrastval);
+            }
+
+            if (menupos==4){ //fuel level 2
+                backlight=max(backlight-10,0);
+                analogWrite(9,backlight);
+                backlight!=0 ? oled.ssd1306WriteCmd(B10100110) : oled.ssd1306WriteCmd(B10100111); //invert lcd so its more visible with bl off
+            }
+
+            delay(20); //make sure values dont increase or decrease so fast
+        }
+    
+
+        
+      }
+
+        if (menuselect==3){
+
+          if (up_ || up_rpt){
+
+              if (menupos==0){
+                  clean_void_val= min(9,clean_void_val+1);
+              }
+
+              if (menupos==1){
+                purge_oil_set= min(255,purge_oil_set+1);
+              }
+
+              if (menupos==2){
+                purge_oil_rawspd= min(99,purge_oil_rawspd+1);
+              }
+
+          }
+
+          if (dn_ || dn_rpt){
+
+              if (menupos==0){
+                  clean_void_val= max(0,clean_void_val-1);
+              }
+
+              if (menupos==1){
+                purge_oil_set= max(0,purge_oil_set-1);
+              }
+
+              if (menupos==2){
+                purge_oil_rawspd= max(1,purge_oil_rawspd-1);
+              }
+
+          }
+    }
+
+    }
+
+    else{
+        if ((up_ && menuselect==0) || (dn_ && menuselect>0)){
+            menupos=min(menupos+1,numopt);
+            blinker=1;
+        }
+
+        if ((dn_ && menuselect==0) || (up_ && menuselect>0)){
+            if (menuselect==0 && menupos==1) force=1;
+            menupos=max(menupos-1, 0 );
+            blinker=1;
+        }
+    }
+
+
+    
+
+
+
+    ////// SELECTIONS
+
+    if (menuselect==0){
+        if (menupos>=0){
+            if (sel_){
+
+                if (menupos==0 && test_en) pumptest=!pumptest;
+                
+                if (menupos>0 && menupos<6) writeEeprom(menupos+1);
+                /*
+                bool nop_;
+                if (menupos==1 && submenu){
+                    
+                    float tankval_0_test_;
+                    EEPROM.get(0,tankval_0_test_);
+                    tankval[0]!=tankval_0_test_ ? EEPROM.put(0,tankval[0]) : nop_=0;
+                    
+                }
+                if (menupos==2 && submenu){
+                    
+                    float tankval_1_test_;
+                    EEPROM.get(4,tankval_1_test_);
+                    tankval[1]!=tankval_1_test_ ? EEPROM.put(4,tankval[1]) : nop_=0;
+                    
+                }
+
+                if (menupos==3 && submenu){
+                    byte t1rat_test_;
+                    EEPROM.get(32,t1rat_test_);
+                    t1rat!=t1rat_test_ ? EEPROM.put(32,t1rat) : nop_=0;
+                }
+
+                if (menupos==4 && submenu){
+                    byte t2rat_test_;
+                    EEPROM.get(33,t2rat_test_);
+                    t2rat!=t2rat_test_ ? EEPROM.put(33,t2rat) : nop_=0;
+                }
+
+                if (menupos==5 && submenu){
+                    unsigned int preheat_test_;
+                    EEPROM.get(30,preheat_test_);
+                    preheat_t!=preheat_test_ ? EEPROM.put(30,preheat_t) : nop_=0;
+                }
+*/
+
+                if (menupos!=6 && menupos!=0) submenu=!submenu;
+
+                if (menupos==6){
+                    entermenu:
+                    menuselect=1;
+                    oled.clear();
+                    menuinitdraw();
+                    menuvaldraw();
+                    goto end_pre;
+                }
+            }
+
+            if (sel_rpt && menupos==0) goto entermenu;
+        }
+    }
+
+    if (menuselect==1){
+        if (sel_){
+            
+            if (menupos<6 && menupos!=2){
+                submenu=!submenu;
+
+            }
+
+            if (menupos==2){
+                set_runout<1 ? set_runout++ : set_runout=0;
+                set_runout==1 ? oilout=1 : oilout=0;
+            }
+
+            
+            
+            if (menupos==7){
+                menuselect=0;
+                menupos=0;
+                submenu=0;
+                oled.clear();
+                force=1;
+                goto end_pre;
+            }
+
+            if (menupos==6){
+                menuselect=2;
+                menupos=6;
+                submenu=0;
+                oled.clear();
+                force=1;
+                menuinitdraw();
+                menuvaldraw();
+                goto end_pre;
+            }
+
+            
+            
+        }
+        if (menupos==2){
+            if (sel_long){
+
+                submenu=1;
+
+                if (up_){
+                    basic_mode=!basic_mode;
+                    basicedit=1;
+                    menuinitdraw();
+                    menuvaldraw();
+                }
+            }
+            else{
+                basicedit=0;
+
+                submenu=0;
+            }
+        }
+    }
+
+    if (menuselect==2){
+        if (sel_){
+            
+            if (menupos!=0 && menupos<=4){
+                submenu=!submenu;
+            }
+
+            if (menupos==0){
+                time_l=!time_l;
+            }
+/*
+            if (menupos==4){
+                backlight=!backlight;
+                backlight ? oled.ssd1306WriteCmd(B10100110) : oled.ssd1306WriteCmd(B10100111); //invert lcd so its more visible with bl off
+                digitalWrite(9,backlight);
+            }
+*/
+            if (menupos==5){        //save to eeprom
+
+                oled.setCursor(80,5);
+                oled.setFont(System5x7);
+                oled.print(writeEeprom());
+                oled.print("  ");
+                oled.setCursor(92,5);
+                oled.print(" Saved");
+            }
+
+            if (menupos==6){
+                menuselect=3;
+                menupos=6;
+                submenu=0;
+                oled.clear();
+                force=1;
+                menuinitdraw();
+                menuvaldraw();
+                goto end_pre;
+            }
+
+            if (menupos==7){
+                menuselect=0;
+                menupos=0;
+                submenu=0;
+                oled.clear();
+                force=1;
+                goto end_pre;
+            }
+            
+            
+        }
+
+        
+    }
+
+    if (menuselect==3){
+        if (sel_){
+            
+            if (menupos<=4){
+
+                if (menupos==2 && submenu){
+                    float purge_oil_decimal= (1./purge_oil_rawspd);
+                    purge_oil_spd= purge_oil_decimal*5000;
+                }
+                submenu=!submenu;
+            }
+
+            if (menupos==0){
+               
+            }
+
+            
+/*
+            if (menupos==4){
+                backlight=!backlight;
+                backlight ? oled.ssd1306WriteCmd(B10100110) : oled.ssd1306WriteCmd(B10100111); //invert lcd so its more visible with bl off
+                digitalWrite(9,backlight);
+            }
+*/
+            if (menupos==4){     //test mode   
+                test_en=!test_en;
+                pumptest=0;
+                submenu=0;
+                
+            }
+
+           
+
+            if (menupos==6){
+                menuselect=1;
+                menupos=6;
+                submenu=0;
+                oled.clear();
+                force=1;
+                menuinitdraw();
+                menuvaldraw();
+            }
+
+            if (menupos==7){
+                menuselect=0;
+                menupos=0;
+                submenu=0;
+                oled.clear();
+                force=1;
+                goto end_pre;
+            }
+
+            
+            
+        }
+
+        if (sel_long && menupos==5){
+            eepromreset();
+            oled.clear();
+            oled.home();
+            oled.setFont(System5x7);
+            oled.print("Resetting");
+            while(1){}
+
+        }
+    }
+    
+
+    end_pre:
+    if (
+        up_     ||
+        up_rpt  ||
+        sel_    ||
+        sel_rpt ||
+        dn_     ||
+        dn_rpt   
+    )
+    {
+        if (menuselect==0){initdraw();}
+        if (menuselect>0) {
+            if (submenu) menuvaldraw();
+            menuselectdraw();
+            }
+        wdt_reset();
+        menufn();
+    }
+    
+
+}
+
+
+
+
+
+
+
+
+
+
+// 14 chars per line limit
+void menuinitdraw(){
+  if (menuselect==1){
+    oled.setFont(System5x7);
+    oled.setCursor(10,0); oled.print("T1 Oil Max L");
+    oled.setCursor(10,1); oled.print("T2 Fuel Max L");
+    oled.setCursor(10,2); oled.print(basicedit ? "Controller   " : "Stop on empty");
+    oled.setCursor(10,3); oled.print("Low alarm %");
+    oled.setCursor(10,4); oled.print("Burn clean qty");
+    oled.setCursor(10,5); oled.print("Burn clean int");
+    oled.setCursor(10,6); oled.print("Next page");
+    oled.setCursor(10,7); oled.print("Return");
+  }
+
+  if (menuselect==2){
+    oled.setFont(System5x7);
+    oled.setCursor(10,0); oled.print("Flip time/litre");
+    oled.setCursor(10,1); oled.print("T1 Pump mL/1k");
+    oled.setCursor(10,2); oled.print("T2 Pump mL/1k");
+    oled.setCursor(10,3); oled.print("Contrast");
+    oled.setCursor(10,4); oled.print("Brightness");
+    oled.setCursor(10,5); oled.print("Save config");
+    oled.setCursor(10,6); oled.print("Next page");
+    oled.setCursor(10,7); oled.print("Return");
+  }
+
+  if (menuselect==3){
+    oled.setFont(System5x7);
+    oled.setCursor(10,0); oled.print("Clean Void Rat.");
+    oled.setCursor(10,1); oled.print("Purge Oil Pulses");
+    oled.setCursor(10,2); oled.print("Purge Rate");
+    oled.setCursor(10,3); oled.print("<spare>");
+    oled.setCursor(10,4); oled.print("Test mode");
+    oled.setCursor(10,5); oled.print("Factory reset (hold)");
+    oled.setCursor(10,6); oled.print("First page");
+    oled.setCursor(10,7); oled.print("Return");
+  }
+}
+
+void popup(){
+
+    oled.setCursor(0,0);
+    oled.setFont(symbol);
+
+    oled.print('q'); //top R corner
+    for (byte te=0; te<15; te++){oled.print('p');} //top edge
+    for (byte le=1; le<7;  le++){oled.setCursor(0,le); oled.print('r');} //left edge
+    oled.setCursor(0,7); oled.print("st"); //lb corner and first b edge
+    for (byte be=2; be<15; be++){oled.print('u');} //bottom edge
+    for (byte re=2; re<7;  re++){oled.setCursor(120,re); oled.print('w');} //left edge
+    oled.setCursor(120,0); oled.print('y'); // RB corner
+    oled.setCursor(120,1); oled.print('x'); //last R edge
+    oled.setCursor(120,7); oled.print('v'); // BR corner
+
+}
+
+void menuvaldraw(){
+
+    bool nop;
+        
+    if (menuselect==1){
+        // Tank max 1
+        //int tankval_1=tankmax[0];
+        oled.setCursor(98, 0);
+        oled.setFont(numerals4x7);
+        if (tankmax[0] / 100 < 10) {
+            oled.print('@');
+        }
+        oled.print(tankmax[0] / 100);
+        oled.print('.');
+        if (tankmax[0] % 100 < 10) {
+            oled.print(0);
+        }
+        oled.print(tankmax[0] % 100);
+        oled.print('E'); // L
+
+        // Tank max 2
+        //int tankval_2=tankmax[1];
+        oled.setCursor(98, 1);
+        oled.setFont(numerals4x7);
+         if (tankmax[1] / 100 < 10) {
+            oled.print('@');
+        }
+        oled.print(tankmax[1] / 100);
+        oled.print('.');
+        if (tankmax[1] % 100 < 10) {
+            oled.print(0);
+        }
+        oled.print(tankmax[1] % 100);
+        oled.print('E'); // L
+
+        // stop on empty
+        oled.setFont(System5x7);
+        oled.setCursor(98, 2);
+        if (!basicedit){
+            if (set_runout == 0) { // diesel
+                oled.print("Fuel ");
+            } else if (set_runout == 1) { // kero
+                oled.print("Oil  ");
+            } else if (set_runout == 2) { // kero
+                oled.print("None ");
+            }
+        }
+        else{
+            oled.print(basic_mode ? "Basic" : "Full ");
+        }
+
+        //low alarm %
+        oled.setFont(System5x7);
+        oled.setCursor(98, 3);
+        oled.print(bar_low_perc);
+        bar_low_perc<10 ? oled.print(' ') : nop;
+
+        // fuel purge mL
+        //oled.setFont(System5x7);
+        //oled.setCursor(98, 4);
+        //oled.print(runout_val*10,0);
+        //oled.setFont(symbol);
+        //oled.print("ml");
+
+        //clean burn chamber qty
+        oled.setCursor(98, 4);
+        oled.setFont(numerals4x7);
+        if (tankclean_amt / 100 < 10) {
+            oled.print('@');
+        }
+        oled.print(tankclean_amt / 100);
+        oled.print('.');
+        if (tankclean_amt % 100 < 10) {
+            oled.print(0);
+        }
+        oled.print(tankclean_amt % 100);
+        oled.print('E'); // L
+
+
+        //clean burn chamber interval
+        oled.setCursor(98, 5);
+        oled.setFont(numerals4x7);
+        if (tankclean_val / 100 < 10) {
+            oled.print('@');
+        }
+        oled.print(tankclean_val / 100);
+        oled.print('.');
+        if (tankclean_val % 100 < 10) {
+            oled.print(0);
+        }
+        oled.print(tankclean_val % 100);
+        oled.print('E'); // L
+
+
+    }
+
+    if (menuselect==2){
+        oled.setFont(System5x7);
+        oled.setCursor(110, 0);
+        oled.print(time_l ? "Yes" : "No ");
+
+        // Tank pump 1
+        oled.setCursor(98, 1);
+        oled.setFont(numerals4x7);
+        pumprate<0.1 ? oled.print('@') : nop;
+        oled.print(pumprate*10000);
+
+        // Tank pump 2
+        oled.setCursor(98, 2);
+        oled.setFont(numerals4x7);
+        pumprate_2<0.1 ? oled.print('@') : nop;
+        oled.print(pumprate_2*10000);
+        
+        // contrast
+        oled.setCursor(110,3);
+        oled.setFont(System5x7);
+        contrastval-215<10 ? oled.print(' ') : nop;
+        oled.print(contrastval-215);
+
+        // backlight/invert
+        oled.setCursor(110,4);
+        //oled.print(backlight ? "Off" : "On " );
+        oled.setFont(System5x7);
+        backlight/10 <10 ? oled.print(' ') : nop;
+        oled.print(backlight/10);
+    }
+
+    if (menuselect==3){
+        oled.setFont(System5x7);
+        
+        oled.setCursor(104, 0);
+        oled.print(clean_void_val); oled.print("/10");
+
+        oled.setCursor(110, 1);
+        oled.print(purge_oil_set);
+
+        oled.setCursor(86, 2);
+        oled.print(purge_oil_rawspd/10);
+        oled.print('.');
+        oled.print(purge_oil_rawspd%10);
+        oled.print("Hz");
+        
+        oled.setCursor(110, 4);
+        oled.print(test_en ? "Yes" : "No ");
+    }
+}
+
+
+
+
+
+void menuselectdraw(){
+  
+  if (menuselect<4 && menuselect!=0){
+    oled.setFont(symbol);
+    
+    
+    numopt=7;
+    
+
+
+    for (byte bar=0; bar<=numopt; bar++){
+        oled.setCursor(0,bar);
+        if (bar==menupos){
+            if (submenu==0) {oled.print('>');} //arrow
+            else            {oled.print(';');} //big bullet
+        }
+        else
+        {
+            oled.print('-'); //bullet
+        }
+    }
+  }
+  else{
+    numopt=6; //status edit
+    menupos=6;
+  }
+}

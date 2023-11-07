@@ -1,0 +1,163 @@
+#ifndef MAIN_H
+#define MAIN_H
+
+#include <arduino.h>
+#include "SSD1306Ascii.h"
+//#include "SSD1306AsciiWire.h"
+#include "SSD1306AsciiAvrI2c.h"
+#include "Button.h"
+#include <avr/wdt.h>
+
+
+
+//extern SSD1306AsciiWire oled;
+extern SSD1306AsciiAvrI2c oled;
+
+extern Button btnUP;
+extern Button btnDN;
+extern Button btnSEL;
+
+extern byte loadkey;
+extern byte key;
+
+extern unsigned long millis_sec_bl;
+extern unsigned long millisold_bl;
+extern bool blinker;
+extern unsigned long millis_sec_oled;
+extern unsigned long millisold_oled;
+extern int tankmax[];
+extern volatile float tankval[];
+extern volatile float tanktotal_1;
+extern volatile float tanktotal_2;
+extern int tankval_int[];
+extern int tankclean_val;
+extern int tankclean_amt;
+extern bool tankclean_en;
+extern float pumprate;
+extern float pumprate_2;
+extern byte t1rat;
+extern byte t2rat;
+extern bool timedel;
+extern bool runout;
+extern float runout_val;
+extern bool oilout;
+extern unsigned long preheat_old;
+extern byte flashspd;
+extern volatile byte nohz;
+extern byte yeshz;
+extern int hertz;
+extern byte contrastval;
+extern byte backlight;
+extern byte bar_low_perc; //out of 100
+
+extern bool time_l;
+extern int hourover;
+
+extern byte pwmlevel_1;
+extern byte sinelevel_1;
+extern byte pwmlevel_2;
+extern byte sinelevel_2;
+extern int smoothspd;
+
+extern byte sinearray[181];
+extern int timer1_counter;
+
+extern bool trigger_1;
+extern bool trigger_2;
+
+extern volatile unsigned long millis_hz;
+extern volatile unsigned long millis_hz_old;
+
+//time ave arrray
+
+extern int timearray[51];
+extern int timearray_b[51];
+extern int timearraysize;
+extern byte arrayval;
+extern byte arrayval_b;
+extern int timeleft;
+extern int timeleft_b;
+
+//menu
+
+extern bool submenu;
+extern byte menupos;
+extern byte numopt;
+extern unsigned int preheat_t;
+extern float fuel_bar[2];
+
+extern byte menuselect;
+extern byte set_runout;
+extern bool set_remtot;
+
+extern bool force;
+
+extern bool basic_mode;
+extern bool basicedit;
+extern bool basic_wasedit;
+extern bool test_en;
+
+extern bool pumptest;
+extern bool purge_en;
+extern byte clean_void_val;
+
+extern byte clean_void_val;
+extern byte purge_oil_set;
+extern byte purge_oil_val;
+extern unsigned int purge_oil_spd;
+extern byte purge_oil_rawspd;
+extern float purge_oil_decimal;
+
+
+#define  RUN      0
+#define  PREHEAT  1
+#define  IDLE     2
+#define  OIL      3
+#define  FUEL     4
+#define  BOTH     5
+#define  EMPTY    6
+#define  LOWW     7
+#define  PURGE    8
+#define  CLEAN    9
+#define  NONE     10
+#define  INVALID  11
+
+
+//void smoothpulse();
+void pumppulse();
+
+void initdraw();
+void drawtimeleft();
+void initfn();
+
+void blinkerctl();
+
+void clockOledRefresh();
+
+void drawbarfuel(byte);
+void drawfueltext(byte);
+void drawfulltext(byte);
+void menuinitdraw();
+void menuselectdraw();
+void menuvaldraw();
+
+void printstate(byte);
+void printstate_val();
+
+
+//menu
+
+void menufn();
+void popup();
+
+//EEPROM
+
+byte writeEeprom();
+byte writeEeprom(byte);
+void loadEeprom();
+void eepromreset();
+
+
+
+
+#endif

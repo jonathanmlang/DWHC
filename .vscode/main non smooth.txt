@@ -1,0 +1,268 @@
+#include <main.h>
+
+
+// 0X3C+SA0 - 0x3C or 0x3D
+#define I2C_ADDRESS 0x3C
+
+// Define proper RST_PIN if required.
+#define RST_PIN A1
+
+SSD1306AsciiAvrI2c oled;
+//------------------------------------------------------------------------------
+
+unsigned long millis_sec_bl=0;
+unsigned long millisold_bl=0;
+bool blinker=1;
+unsigned long millis_sec_oled=0;
+unsigned long millisold_oled=0;
+int tankmax[2]={350, 1000};
+volatile float tankval[2]={350, 1000};
+int tankval_int[2]={0};
+byte t1rat=10;
+byte t2rat=5;
+unsigned int preheat_t=280;
+int fuel_bar[2]={0};
+byte set_runout=0; // 0=fuel 1=oil 2=none
+bool set_remtot=1;
+volatile byte nohz=0;
+int hertz;
+
+volatile bool pumppulseactive=0;
+volatile bool pumptoggle=0;
+
+volatile byte t1rat_act=0;
+volatile byte t2rat_act=-1;
+volatile bool trat_set=0;
+
+volatile unsigned long millis_hz=0;
+volatile unsigned long millis_hz_old=0;
+
+bool timedel=0;
+bool runout=0;
+bool oilout=0;
+
+unsigned long preheat_old=0;
+
+float pumprate=0.0022;
+
+
+Button btnUP(5,1,1,20);
+Button btnDN(3,1,1,20);
+Button btnSEL(4,1,1,20);
+
+int pulselength=7812;
+
+byte menuselect=0;
+
+//time ave arrray
+
+int timearray[51]={0};
+int timearray_b[51]={0};
+int timearraysize=50;
+byte arrayval=0;
+int timeleft=0;
+byte arrayval_b=0;
+int timeleft_b=0;
+
+void setup() {
+  wdt_reset();
+
+  cli();
+  TCCR2A = 0;                 // Reset entire TCCR1A to 0 
+  
+  TCCR2B |= B00000111;        //Set CS20, CS21 and CS22 to 1 so we get prescalar 1024  
+  
+  //byte pulselength=40; //off time
+  //byte pulselengthb=100; //on time
+  //OCR1A = 3906;     //for 0.25sec
+  //OCR1A = 7812;    //for 0.5sec
+  OCR2A = 40;   //for 1sec
+  //OCR1A = 31250;   //for 2sec
+
+  
+  TIMSK2 |= B00000010;        //Set OCIE1B to 1 so we enable compare match B and A
+  sei(); 
+
+#if RST_PIN >= 0
+  oled.begin(&Adafruit128x64, I2C_ADDRESS, RST_PIN);
+#else // RST_PIN >= 0
+  oled.begin(&Adafruit128x64, I2C_ADDRESS);
+#endif // RST_PIN >= 0
+  // Call oled.setI2cClock(frequency) to change from the default frequency.
+
+
+  pinMode(A0,OUTPUT); //red led
+  pinMode(7,OUTPUT); //pump1
+  pinMode(8,OUTPUT); //pump2
+  pinMode(6,OUTPUT); //relay
+  digitalWrite(6,1);
+
+  pinMode(12,OUTPUT); //input pulse test
+
+  pinMode(2,INPUT); //pump signal input
+
+  attachInterrupt(digitalPinToInterrupt(2), pumppulse, CHANGE);
+
+  wdt_enable(WDTO_4S); //Enable WDT with a timeout of 2 seconds
+
+  //digitalWrite(7,0);
+  
+  //led test
+ /* digitalWrite(A0,1);
+  delay(1000);
+  digitalWrite(A0,0);
+
+  digitalWrite(8,1);
+  delay(1000);
+  digitalWrite(8,0);
+
+  digitalWrite(7,1);
+  delay(1000);
+  digitalWrite(7,0);
+
+  delay(1000);*/
+  //end led test
+  
+  //digitalWrite(12,1); //led lights on low
+
+
+                        //Reset Timer1 control Registor A
+
+  
+  
+  
+
+  
+
+}
+//------------------------------------------------------------------------------
+int timacount=0;
+int timbcount=0;
+byte flashspd=13;
+
+ISR(TIMER2_COMPA_vect)
+{
+  timacount++;
+  if (timacount<flashspd-5){
+    digitalWrite(12,1);
+  }
+  else{
+    if (timacount<flashspd){
+      digitalWrite(12,0);
+    }
+    else{
+      timacount=0;
+    }
+  }
+  
+  
+
+}
+
+void pumppulse(){
+
+  pumptoggle=!pumptoggle;
+  
+  if ((tankval[0]==0 && oilout) || tankval[1]<=0){  //tank0 = oil tank1 = fuel 
+      pumppulseactive=0;
+  }
+  else{
+      pumppulseactive=1;
+  }
+
+  if (pumptoggle){
+    millis_hz_old=millis_hz;
+    millis_hz=millis();
+    nohz=0;
+  }
+
+  retest:
+
+  if (pumppulseactive && pumptoggle){
+
+    //digitalWrite(6,1); //enable relay
+    if (!trat_set && t2rat_act<t2rat){
+      t2rat_act++;
+      digitalWrite(7,1);
+      digitalWrite(8,0);
+      tankval[1] = max(tankval[1]-pumprate, 0.0);
+    }
+    else{
+      t2rat_act=0;
+      trat_set=1; 
+    }
+    bool val=!(timedel || runout);
+    if (trat_set && t1rat_act< (t1rat*val)){
+      t1rat_act++;
+      digitalWrite(8,1);
+      digitalWrite(7,0);
+      tankval[0] = max(tankval[0]-pumprate, 0.0);
+    }
+    else{
+      t1rat_act=0;
+      if (trat_set==1){
+        trat_set=0;
+        goto retest;
+      }
+    }
+  }
+  else{
+    if (tankval[1]<=0 || !pumptoggle){ //if fuel but not oil runs out, halt pumping to trigger pump error on controller
+      digitalWrite(7,0);
+      digitalWrite(8,0);    // there is another event in draw.cpp that sets these ports to 1 if nohz>=10
+    //pumptoggle=0;
+    }
+  }
+
+}
+
+void loop() {
+
+  blinkerctl();
+  clockOledRefresh();
+
+  menufn();
+
+  wdt_reset();
+
+}
+
+
+
+void blinkerctl(){
+
+    millis_sec_bl=millis()*0.0005;  //pump pulse simulator every 0.5 seconds
+    if (millis_sec_bl > millisold_bl){
+      
+      millisold_bl=millis_sec_bl;
+    }
+}
+
+
+
+void clockOledRefresh(){
+
+    millis_sec_oled=millis()*0.005;  //Oled refresh clock and blinker
+    if (millis_sec_oled > millisold_oled){
+      
+      blinker=!blinker;
+      if (menuselect==1){
+        menuinitdraw();
+        drawbarfuel(0);
+        drawbarfuel(1); //to continue watching the fuel level but not display it
+        menuvaldraw();
+        menuselectdraw();
+      }
+      else{
+        initdraw();
+        drawtimeleft();
+        initfn();
+      }
+      millisold_oled=millis_sec_oled;
+    }
+}
+
+
+
+
+

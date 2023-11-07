@@ -1,0 +1,674 @@
+#include <main.h>
+#include "EEPROM.h"
+
+
+
+
+// 0X3C+SA0 - 0x3C or 0x3D or 0x3F lcd
+#define I2C_ADDRESS 0x3F//0x3C
+
+// Define proper RST_PIN if required.
+#define RST_PIN -1//A1
+
+//SSD1306AsciiWire oled;
+SSD1306AsciiAvrI2c oled;
+//------------------------------------------------------------------------------
+
+byte loadkey=243;
+byte key=57;
+
+unsigned long millis_sec_bl=0;
+unsigned long millisold_bl=0;
+bool blinker=1;
+unsigned long millis_sec_oled=0;
+unsigned long millisold_oled=0;
+int tankmax[2]={1000, 400};
+volatile float tankval[2]={1000, 400};
+volatile float tanktotal_1=0;
+volatile float tanktotal_2=0;
+int tankval_int[2]={0};
+int tankclean_val=500;
+int tankclean_amt=50;
+bool tankclean_en=0;
+byte t1rat=10;
+byte t2rat=5;
+unsigned int preheat_t=280;
+float fuel_bar[2]={0};
+byte set_runout=0; // 0=fuel 1=oil 2=none
+bool set_remtot=1;
+volatile byte nohz=10;
+byte yeshz=0;
+int hertz=0;
+byte bar_low_perc= 40; //out of 100
+float runout_val=2.0;
+
+bool time_l=0;
+int hourover=0;
+
+byte pwmlevel_1=0;
+byte sinelevel_1=0;
+byte pwmlevel_2=0;
+byte sinelevel_2=0;
+int smoothspd=0;
+bool trigger_1=0;
+bool trigger_2=0;
+
+volatile bool pumppulseactive=0;
+volatile bool pumptoggle=0;
+
+volatile byte t1rat_act=0;
+volatile byte t2rat_act=-1;
+volatile bool trat_set=0;
+
+volatile unsigned long millis_hz=0;
+volatile unsigned long millis_hz_old=0;
+
+bool timedel=0;
+bool runout=0;
+bool oilout=0;
+
+unsigned long preheat_old=0;
+
+float pumprate=0.0022;
+float pumprate_2=0.0022;
+
+bool force=0;
+
+byte contrastval=233;
+byte backlight=250;
+
+
+Button btnUP(5,1,1,20);
+Button btnDN(3,1,1,20);
+Button btnSEL(4,1,1,20);
+
+int pulselength=7812;
+
+byte menuselect=0;
+
+bool basic_mode=0;
+bool basicedit=0;
+bool basic_wasedit=0;
+
+//time ave arrray
+
+int timearray[51]={0};
+int timearray_b[51]={0};
+int timearraysize=50;
+byte arrayval=0;
+int timeleft=0;
+byte arrayval_b=0;
+int timeleft_b=0;
+
+int timer1_counter;
+
+bool test_en=1;
+
+byte clean_void_val=0;
+byte purge_oil_set=10;
+byte purge_oil_val=0;
+unsigned int purge_oil_spd=0;
+byte purge_oil_rawspd=47;
+bool purge_en=0;
+float purge_oil_decimal=0;
+
+void setup() {
+  wdt_reset();
+  wdt_enable(WDTO_4S); //Enable WDT with a timeout of 2 seconds
+  pinMode(13,OUTPUT); //input pulse test
+  
+  purge_oil_decimal= 1./purge_oil_rawspd;
+  purge_oil_spd= purge_oil_decimal*5000.0;
+
+  purge_oil_val= purge_oil_set;
+
+  digitalWrite(13,1);
+  delay(100);
+  digitalWrite(13,0);
+  //pinMode(13,INPUT);
+
+  pinMode(A0,OUTPUT); //red led
+  //pinMode(7,OUTPUT); //pump1
+  //pinMode(8,OUTPUT); //pump2
+  pinMode(8,OUTPUT); //pump1
+  pinMode(7,OUTPUT); //pump2
+
+  pinMode(6,OUTPUT); //relay
+  digitalWrite(6,0);
+
+  
+  pinMode(12,OUTPUT); //input pulse test
+
+  pinMode(2,INPUT); //pump signal input
+/*
+  digitalWrite(A0,1);
+  delay(100);
+  digitalWrite(8,1);
+  delay(100);
+  digitalWrite(7,1);
+  delay(100);
+  
+  digitalWrite(A0,0);
+  delay(100);
+  digitalWrite(8,0);
+  delay(100);
+  digitalWrite(7,0);
+  delay(100);
+  */
+
+  cli();
+  TCCR2A = 0;                 // Reset entire TCCR1A to 0 
+  
+  TCCR2B |= B00000111;        //Set CS20, CS21 and CS22 to 1 so we get prescalar 1024  
+  
+  //byte pulselength=40; //off time
+  //byte pulselengthb=100; //on time
+  //OCR1A = 3906;     //for 0.25sec
+  //OCR1A = 7812;    //for 0.5sec
+  OCR2A = 40;   //for 1sec
+  OCR2B = 50;   //for 1sec
+  //OCR1A = 31250;   //for 2sec
+
+  
+  TIMSK2 |= B00000110;        //Set OCIE1B to 1 so we enable compare match B and A
+
+
+/*
+   TCCR1A = 0;
+  TCCR1B = 0;
+
+  timer1_counter = 6500; //34286;   // preload timer 65536-16MHz/256/2Hz
+  
+  TCNT1 = timer1_counter;   // preload timer
+  TCCR1B |= (1 << CS10);    // 256 prescaler 
+  TIMSK1 |= (1 << TOIE1);   // enable timer overflow interrupt
+*/
+
+  //TCCR1B = TCCR1B & B11111000 | B00000001;
+
+  
+
+  //oled.setI2cClock(200000L);
+  //Wire.begin();
+  //oled.setI2cClock(400000L);
+//Wire.setWireTimeout(500000UL,1);
+
+
+
+  oled.setContrast(contrastval);
+
+  
+
+  #if RST_PIN >= 0
+  oled.begin(&Adafruit128x64, I2C_ADDRESS, RST_PIN);
+#else // RST_PIN >= 0
+  oled.begin(&ST7567_128x64, I2C_ADDRESS);
+  //oled.begin(&Adafruit128x64, I2C_ADDRESS);
+#endif // RST_PIN >= 0
+  // Call oled.setI2cClock(frequency) to change from the default frequency.
+  
+  //oled.ssd1306WriteCmd(B10100111);
+
+  attachInterrupt(digitalPinToInterrupt(2), pumppulse, CHANGE);
+
+  
+
+  //digitalWrite(7,0);
+  
+  //led test
+ /* digitalWrite(A0,1);
+  delay(1000);
+  digitalWrite(A0,0);
+
+  digitalWrite(8,1);
+  delay(1000);
+  digitalWrite(8,0);
+
+  digitalWrite(7,1);
+  delay(1000);
+  digitalWrite(7,0);
+
+  delay(1000);*/
+  //end led test
+  
+  //digitalWrite(12,1); //led lights on low
+
+
+                        //Reset Timer1 control Registor A
+
+  
+  //digitalWrite(13,1);
+  //delay(100);
+  //digitalWrite(13,0);
+  
+
+  force=1;
+
+  oled.clear();
+
+  
+
+  if (EEPROM.read(key)==loadkey){
+    loadEeprom();
+  }
+  else{
+    EEPROM.write(key,loadkey);
+    writeEeprom(0);
+  }
+
+  pinMode(9,OUTPUT); //backlight
+  analogWrite(9,backlight);
+  backlight!=0 ? oled.ssd1306WriteCmd(B10100110) : oled.ssd1306WriteCmd(B10100111); //invert lcd so its more visible with bl off
+
+
+  sei(); 
+}
+//------------------------------------------------------------------------------
+int timacount=0;
+int timbcount=0;
+byte flashspd=13;
+
+ISR(TIMER2_COMPA_vect)
+{
+  timacount++;
+  if (timacount<flashspd-5){
+    digitalWrite(12,1);
+  }
+  else{
+    if (timacount<flashspd){
+      digitalWrite(12,0);
+    }
+    else{
+      timacount=0;
+    }
+  }
+  
+  
+
+}
+
+ISR(TIMER2_COMPB_vect)
+{
+
+  //smoothpulse();
+  OCR2B+=smoothspd;
+}
+
+/*
+ISR(TIMER1_OVF_vect)        // interrupt service routine 
+{
+  
+
+  
+
+  TCNT1 = timer1_counter;
+  
+
+}
+*/
+/*
+void smoothpulse(){
+
+  if (trigger_1){
+     if (sinelevel_1<180){
+      sinelevel_1+=1;
+      }
+      else{
+        sinelevel_1=0;
+        trigger_1=0;
+      }
+
+    analogWrite(9,max(128-sinearray[sinelevel_1],0));
+  }
+
+  if (trigger_2){
+     if (sinelevel_2<180){
+      sinelevel_2+=1;
+      }
+      else{
+        sinelevel_2=0;
+        trigger_2=0;
+      }
+
+    analogWrite(10,max(128-sinearray[sinelevel_2],0));
+  }
+  
+  
+
+ 
+}
+*/
+bool pumptest=0;  ///test mode
+
+void pumppulse(){
+
+  //pumptoggle=pumptest ? !pumptoggle : !digitalRead(2);
+
+  digitalWrite(13,pumptoggle);
+
+  bool val=!(timedel || runout || tankclean_en); // if fuel only
+
+  if (purge_en){
+        digitalWrite(7,pumptoggle);
+        tankval[1] = max(tankval[1]-pumprate_2, 0.0);
+        if (!pumptoggle) purge_oil_val++;
+      }
+
+  if (pumptest || purge_en){
+    pumptoggle= !pumptoggle;
+  }
+  else {
+    pumptoggle= !digitalRead(2);
+  }
+
+  if (!purge_en) nohz=0;
+  
+  if ((tankval[0]<=0 && oilout) || tankval[1]<=0){  //tank0 = oil tank1 = fuel 
+      pumppulseactive=0;
+  }
+  else{
+
+      if (tankval[0]>0 && val && t2rat==0){
+        pumppulseactive=0;
+        digitalWrite(8,pumptoggle);
+        tankval[0] = max(tankval[0]-pumprate, 0.0);
+      }
+      else{
+        pumppulseactive=1;
+      }
+  }
+
+  if (pumptoggle){
+    millis_hz_old=millis_hz;
+    millis_hz=millis();
+    
+  }
+
+  retest:
+
+  if (!purge_en){
+  if (pumppulseactive && pumptoggle){
+
+    
+    //digitalWrite(6,1); //enable relay
+    if (!trat_set && (t2rat_act<t2rat || t2rat==0)){
+      if (t2rat>0) t2rat_act++;
+      digitalWrite(7,1);
+      digitalWrite(8,0);
+      //trigger_1=1; //pin9
+      tankval[1] = max(tankval[1]-pumprate_2, 0.0);
+      tanktotal_1+=pumprate_2; //counting for triggering clean routine
+    }
+    else{
+      t2rat_act=0;
+      trat_set=1; 
+    }
+    bool val=!(timedel || runout || tankclean_en);
+    if (trat_set && t1rat_act< (t1rat*val)){
+      t1rat_act++;
+      
+      digitalWrite(8,1);
+      digitalWrite(7,0);
+      //trigger_2=1; //pin10
+      tankval[0] = max(tankval[0]-pumprate, 0.0);
+      tanktotal_1+=pumprate;
+    }
+    else{
+      t1rat_act=0;
+      if (trat_set==1){
+        trat_set=0;
+        goto retest;
+      }
+    }
+  }
+  else{
+    if (tankval[1]<=0 || !pumptoggle){ //if fuel but not oil runs out, halt pumping to trigger pump error on controller
+      digitalWrite(7,0);
+      digitalWrite(8,0);    // there is another event in draw.cpp that sets these ports to 1 if nohz>=10
+    //pumptoggle=0;
+    }
+  }
+ }
+
+}
+unsigned long millisold_led=0;
+void loop() {
+
+  if (pumptest==1 || purge_en==1) blinkerctl(); //pump pulse test
+  clockOledRefresh();
+  wdt_reset();
+  menufn();
+
+
+
+  
+
+}
+
+
+
+void blinkerctl(){
+
+      //pump pulse simulator every 0.5 seconds
+    if (millis() - millisold_bl > purge_oil_spd){
+      
+      pumppulse();
+      millisold_bl=millis();
+    }
+    
+}
+
+byte redraw=0;
+
+void clockOledRefresh(){
+
+    //millis_sec_oled=millis()*0.005;  //Oled refresh clock and blinker
+    if (millis()-millisold_oled > 250){
+      
+      blinker=!blinker;
+      if (menuselect>0){
+        menuinitdraw();
+        drawbarfuel(0);
+        drawbarfuel(1); //to continue watching the fuel level but not display it
+        menuvaldraw();
+        menuselectdraw();
+      }
+      else{
+        if (redraw<40){
+            redraw++;
+          }
+          else{
+            redraw=0;
+            force=1;
+          }
+        initdraw();
+        drawtimeleft();
+        printstate_val();
+        initfn();
+        force=0;
+      }
+
+      if (hourover>14400){
+        
+        writeEeprom(1);
+        writeEeprom(2);
+
+        hourover=0;
+      }
+      else{
+        hourover++;
+      }
+      millisold_oled=millis();
+    }
+}
+
+
+
+
+//EEPROM
+byte writeEeprom(){
+  return writeEeprom(0);
+}
+
+byte writeEeprom(byte param){
+
+  byte nop=17;
+
+  //menu
+  noInterrupts();
+#if param==0 || param==1
+  float tankval_0_test;
+  EEPROM.get(0,tankval_0_test);
+  tankval[0]!=tankval_0_test ? EEPROM.put(0,tankval[0]) : nop--;
+#endif
+
+#if param==0 || param==2
+  float tankval_1_test;
+  EEPROM.get(4,tankval_1_test);
+  tankval[1]!=tankval_1_test ? EEPROM.put(4,tankval[1]) : nop--;
+#endif
+  interrupts();
+
+#if param==0 || param==3
+  int tankmax_0_test;
+  EEPROM.get(8,tankmax_0_test);
+  tankmax[0]!=tankmax_0_test ? EEPROM.put(8,tankmax[0]) : nop--;
+#endif
+
+#if param==0 || param==4
+  int tankmax_1_test;
+  EEPROM.get(10,tankmax_1_test);
+  tankmax[1]!=tankmax_1_test ? EEPROM.put(10,tankmax[1]) : nop--;
+#endif
+
+#if param==0 || param==5
+  byte set_runout_test;
+  EEPROM.get(12,set_runout_test);
+  set_runout!=set_runout_test ? EEPROM.put(12,set_runout) : nop--;
+#endif
+
+#if param==0 || param==6
+  byte bar_low_perc_test;
+  EEPROM.get(13,bar_low_perc_test);
+  bar_low_perc!=bar_low_perc_test ? EEPROM.put(13,bar_low_perc) : nop--;
+#endif
+
+#if param==0 || param==7
+  int tankclean_amt_test;
+  EEPROM.get(14,tankclean_amt_test);
+  tankclean_amt!=tankclean_amt_test ? EEPROM.put(14,tankclean_amt) : nop--;
+#endif
+
+#if param==0 || param==8
+  int tankclean_val_test;
+  EEPROM.get(16,tankclean_val_test);
+  tankclean_val!=tankclean_val_test ? EEPROM.put(16,tankclean_val) : nop--;
+#endif
+
+#if param==0 || param==9
+  byte time_l_test;
+  EEPROM.get(18,time_l_test);
+  time_l!=time_l_test ? EEPROM.put(18,time_l) : nop--;
+#endif
+
+#if param==0 || param==10
+  float pumprate_test;
+  EEPROM.get(20,pumprate_test);
+  pumprate!=pumprate_test ? EEPROM.put(20,pumprate) : nop--;
+#endif
+
+#if param==0 || param==11
+  float pumprate_2_test;
+  EEPROM.get(24,pumprate_2_test);
+  pumprate_2!=pumprate_2_test ? EEPROM.put(24,pumprate_2) : nop--;
+#endif
+
+#if param==0 || param==12
+  byte contrast_test;
+  EEPROM.get(28,contrast_test);
+  contrastval!=contrast_test ? EEPROM.put(28,contrastval) : nop--;
+#endif
+
+#if param==0 || param==13
+  byte backlight_test;
+  EEPROM.get(29,backlight_test);
+  backlight!=backlight_test ? EEPROM.put(29,backlight) : nop--;
+#endif
+
+#if param==0 || param==14
+  unsigned int preheat_test;
+  EEPROM.get(30,preheat_test);
+  preheat_t!=preheat_test ? EEPROM.put(30,preheat_t) : nop--;
+#endif
+
+#if param==0 || param==15
+  byte t1rat_test;
+  EEPROM.get(32,t1rat_test);
+  t1rat!=t1rat_test ? EEPROM.put(32,t1rat) : nop--;
+#endif
+
+#if param==0 || param==16
+  byte t2rat_test;
+  EEPROM.get(33,t2rat_test);
+  t2rat!=t2rat_test ? EEPROM.put(33,t2rat) : nop--;
+#endif
+
+#if param==0 || param==17
+  bool basic_mode_test;
+  EEPROM.get(34,basic_mode_test);
+  basic_mode!=basic_mode_test ? EEPROM.put(34,basic_mode) : nop--;
+#endif
+  
+
+  return nop;
+
+}
+
+void loadEeprom(){
+
+cli();
+  EEPROM.get(0,tankval[0]);
+
+  EEPROM.get(4,tankval[1]);
+sei();
+
+  EEPROM.get(8,tankmax[0]);
+
+  EEPROM.get(10,tankmax[1]);
+
+  EEPROM.get(12,set_runout);
+
+  EEPROM.get(13,bar_low_perc);
+
+  EEPROM.get(14,tankclean_amt);
+
+  EEPROM.get(16,tankclean_val);
+
+  EEPROM.get(18,time_l);
+ 
+  EEPROM.get(20,pumprate);
+ 
+  EEPROM.get(24,pumprate_2);
+ 
+  EEPROM.get(28,contrastval);
+ 
+  EEPROM.get(29,backlight);
+
+  EEPROM.get(30,preheat_t);
+
+  EEPROM.get(32,t1rat);
+
+  EEPROM.get(33,t2rat);
+
+  EEPROM.get(34,basic_mode);
+  
+
+}
+
+void eepromreset(){
+  EEPROM.write(key,0);
+}
+
+
+
+
