@@ -19,3 +19,5 @@ Green led pin 8
 Blue led pin 7
 
 TMP36 temperature sensor vout pin A6
+
+Made in vscode using arduino and platformio extension
