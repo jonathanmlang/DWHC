@@ -191,9 +191,9 @@ byte printbyte[37]= {0};
 
                 int fan;
                 byte fana= printbyte[10] ^ printbyte[5];
-                byte fanb= printbyte[8] ^ printbyte[5];;
+                byte fanb= printbyte[8] ^ printbyte[5];
                 fan = (fana<<8) | fanb; // remember to dvide by 2 because 2 magnets
-                
+                fan_speed= fan / 2;
               } //for (byte st=0; st<36; st++)
 
           } //if crc test

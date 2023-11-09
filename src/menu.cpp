@@ -127,6 +127,28 @@ void menufn(){
             }
         }
 
+        if (menupos==10){ //max fanrate
+            if (up_ || up_rpt){
+                if (up_rpt) {fanrate_h= min(fanrate_h+100,  9900);}
+                else        {fanrate_h= min(fanrate_h+100,  9900);}
+            }
+            if (dn_ || dn_rpt){
+                if (dn_rpt) {fanrate_h= max(fanrate_h-100, fanrate_l);}
+                else        {fanrate_h= max(fanrate_h-100, fanrate_l);}
+            }
+        }
+
+        if (menupos==11){ //min fanrate
+            if (up_ || up_rpt){
+                if (up_rpt) {fanrate_l= min(fanrate_l+100,  fanrate_h);}
+                else        {fanrate_l= min(fanrate_l+100,  fanrate_h);}
+            }
+            if (dn_ || dn_rpt){
+                if (dn_rpt) {fanrate_l= max(fanrate_l-100, 2000);}
+                else        {fanrate_l= max(fanrate_l-100, 2000);}
+            }
+        }
+
         
 
       }

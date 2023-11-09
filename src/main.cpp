@@ -18,7 +18,7 @@ Button btnSEL(4,1,1,20);
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-PID PID(&Input, &Output, &Setpoint,2,5,1,P_ON_M, DIRECT); //P_ON_M specifies that Proportional on Measurement be used
+PID pid(&Input, &Output, &Setpoint,2,5,1,P_ON_M, DIRECT); //P_ON_M specifies that Proportional on Measurement be used
                                                             //P_ON_E (Proportional on Error) is the default behavior
 
 //------------------------------------------------------------------------------
@@ -35,6 +35,7 @@ float bar_low_perc;
 int bar_low_level=50;
 int roomtemp=21;
 
+
 bool force=0;
 byte menuselect=0;
 bool blinker;
@@ -48,8 +49,10 @@ byte fuelrate=0; //fuel rate in hz/10 so 47= 4.7hz
 byte fuelrate_h=80;
 byte fuelrate_c=0;
 byte fuelrate_l=22;
-int fanrate_h=8200;
-int fanrate_l=3000;
+int fanrate_h=8500;
+int fanrate_l=3500;
+int fanrate_c=0;
+int fan_speed;
 
 byte roomset=23;
 bool fuelout=0;
@@ -70,7 +73,7 @@ unsigned long millis_=0;
 
 bool submenu=0;
 byte menupos=0;
-byte numopt=9;
+byte numopt=12;
 
 //local vars
 
@@ -79,22 +82,38 @@ unsigned long millis_second=0;
 unsigned long millis_tenmin=0;
 byte pumpval=22;
 
+int array_room[50]{0};
 
+byte array_val=0;
 
 
 
 void setup(){
 
+    pinMode(0, INPUT_PULLUP);
+    pinMode(1, INPUT_PULLUP);
+
     analogReference(INTERNAL);
 
-     //initialize the variables we're linked to
-    Input = analogRead(A6);
+    pinMode(A3,1); //voltage to temp sensor
+    digitalWrite(A3,1);
+    delay(100);
+
+    int initread= analogRead(A6);
+
+    for (byte array_count=0; array_count<50; array_count++){
+      array_room[array_count] = initread;
+    }
+    
+    Input = initread;
     Setpoint= (roomset + 50) / 0.1059;
 
     //turn the PID on
-    PID.SetMode(AUTOMATIC);
+    pid.SetMode(AUTOMATIC);
 
     //serial
+
+  
 
     serialsetup();
 
@@ -117,8 +136,7 @@ void setup(){
     pinMode(7,OUTPUT);
     pinMode(8,OUTPUT);
 
-    pinMode(A3,1); //voltage to temp sensor
-    digitalWrite(A3,1);
+    
 
     digitalWrite(8,0); //green led
     digitalWrite(7,0); //blue led
@@ -243,13 +261,34 @@ void setvals(){
   cdhstat[7]=fuelrate_l;
   cdhstat[5]=tempset_c;
   cdhstat[6]=tempset_h;
+
+  cdhstat[10] = (fanrate_l & 0xFF) ;
+  cdhstat[9] = ((fanrate_l >> 8) & 0xFF) ;
+
+  cdhstat[12] = (fanrate_c & 0xFF) *2;
+  cdhstat[11] = ((fanrate_c >> 8) & 0xFF) ; //set fan speed
+  
 }
 
 float fuelrate_smooth=fuelrate_h;
+float fanrate_smooth=fanrate_h;
 
 void roomtempcalc(){
   
-  Input = analogRead(A6);
+  //read temp and average
+
+
+  if (++array_val>49) {array_val=0;}
+
+  array_room[array_val]= analogRead(A6);
+
+  unsigned long array_tot=0;
+
+  for (byte array_count=0; array_count<50; array_count++){
+    array_tot += array_room[array_count];
+  }
+
+  Input = array_tot / 50;
 
   float tempC = (Input * 0.1059) - 50.0;
 
@@ -258,7 +297,7 @@ void roomtempcalc(){
 
   
   if (state!=ERROR || state!=IDLE) 
-  PID.Compute();
+  pid.Compute();
   
   
 
@@ -278,6 +317,23 @@ void roomtempcalc(){
   if (tempset_v>tempset_t){  //if water is getting too hot, reduce hz by 0.2 per degree over
     fuelrate_c = fuelrate_c - ((tempset_v - tempset_t)*2);
   }
+
+
+
+  //fan set
+
+  int fanHiLo_diff = fanrate_h - fanrate_l; // how much hz range is available
+
+  float fan_reduct_f= (float)fanHiLo_diff / 256; // amount of reduction over byte
+        fan_reduct_f= fanrate_h - (fan_reduct_f * (255.0-Output)); //minus the correct proportion
+
+        //hz_reduct_f= fuelrate_h - (hz_reduct_f + 0.5); //round into integer
+  
+
+  if (fanrate_smooth<fan_reduct_f) {fanrate_smooth+=25;}
+  if (fanrate_smooth>fan_reduct_f) {fanrate_smooth-=25;}
+
+  fanrate_c = fanrate_smooth;
 
   setvals();
 
@@ -362,6 +418,7 @@ byte writeEeprom(byte param){
   EEPROM.get(24,fanrate_l_test);
   fanrate_l!=fanrate_l_test ? EEPROM.put(67,fanrate_l) : nop--;
 #endif
+
 
 
   return nop;

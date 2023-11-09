@@ -53,6 +53,7 @@ extern byte fuelrate_c;
 extern byte fuelrate_l;
 extern int fanrate_h;
 extern int fanrate_l;
+extern int fanrate_c;
 extern bool kwmode;
 extern byte fueluse;
 
@@ -75,6 +76,8 @@ extern float drop_amt;
 extern byte cdhstat[37];
 
 extern int roomtemp;
+
+extern int fan_speed;
 
 //serial
 

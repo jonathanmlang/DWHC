@@ -224,9 +224,10 @@ void printstate(byte val){
 
 void drawfuelrate(){
 
-    if (menupos>4 && menupos<7){
+    if ((menupos>4 && menupos<7) || menupos>9 ){
 
        //min temp edit
+      if (menupos<10){
           if (blinker || submenu){ 
             oled.setCursor(43,1);
             oled.setFont(lcdnums8x16);
@@ -252,7 +253,39 @@ void drawfuelrate(){
             if (menupos==6) {oled.print(txt_min); oled.print("[[");}
           }
 
-          
+      }
+      else{
+        if (blinker || submenu){ 
+            oled.setCursor(43,1);
+            oled.setFont(lcdnums8x16);
+            oled.setInvertMode(1);
+            if (menupos==10) {
+              
+              oled.print(fanrate_h/1000);
+              //oled.print('.');
+              oled.print((fanrate_h/100) %10);
+            }
+            if (menupos==11) {
+              
+              oled.print(fanrate_l/1000);
+              //oled.print('.');
+              oled.print((fanrate_l/100) %10);
+            }
+            if (menupos==12) {
+              
+              oled.print(fan_speed/1000);
+              //oled.print('.');
+              oled.print((fan_speed/100) %10);
+            }
+            oled.print("[");
+        }
+        else{
+            oled.setCursor(43,1);
+            oled.setFont(tallletters);
+            if (menupos==10) {oled.print(txt_max); oled.print("[[");}
+            if (menupos==11) {oled.print(txt_min); oled.print("[[");}
+          }
+      }
           
 
     }
@@ -322,16 +355,16 @@ void drawfueltime(){
 
 
   //draw diag
-  //oled.setFont(System5x7);
+  oled.setFont(System5x7);
 
-  //oled.setCursor(92,3);
+  oled.setCursor(92,3);
   //oled.print(analogRead(A6));
   //oled.setCursor(92,4);
   //oled.print(Setpoint);
   //oled.setCursor(92,5);
   //oled.print(cdhstat[8]);
   //oled.setCursor(92,6);
-  //oled.print(Output);
+  oled.print(fanrate_c);
 
 
   
