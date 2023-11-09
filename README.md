@@ -21,3 +21,6 @@ Blue led pin 7
 TMP36 temperature sensor vout pin A6
 
 Made in vscode using arduino and platformio extension
+
+Operation is done using the up and down buttons to navigate the settings and set the values by pressing the select button.
+Switching the heater on and off is done by pressing select at 'position 0' of the on screen menu, the point where nothing is highlighted.
